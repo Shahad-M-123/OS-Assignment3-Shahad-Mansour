@@ -1,8 +1,8 @@
 # Assignment 3 - Complete Documentation
 
-**Student Name**: [Your Full Name]  
-**Student ID**: [Your ID]  
-**Date Submitted**: [Submission Date]
+**Student Name**: [Shahad Mansour Al-Dossari]  
+**Student ID**: [445052028]  
+**Date Submitted**: [30 Apr]
 
 ---
 
@@ -31,42 +31,45 @@
 
 Document your development process with **minimum 3 entries** showing progression:
 
-### Entry 1 - [Date, Time]
-**What I implemented**: 
+### Entry 1 - [29Apr, 10;32]
+**What I implemented**: Set up the repository, changed student ID, made first commit.
 
-**Challenges encountered**: 
+**Challenges encountered**: : None – straightforward setup.
 
-**How I solved it**: 
+**How I solved it**: Followed the VS Code cloning steps.
 
-**Testing approach**: 
+**Testing approach**: : Compiled and ran the original unsynchronized code to see the race con
+ditions (inconsistent log counts).
 
-**Time spent**: 
-
----
-
-### Entry 2 - [Date, Time]
-**What I implemented**: 
-
-**Challenges encountered**: 
-
-**How I solved it**: 
-
-**Testing approach**: 
-
-**Time spent**: 
+**Time spent**: 32 min
 
 ---
 
-### Entry 3 - [Date, Time]
-**What I implemented**: 
+### Entry 2 - [29Apr, 12;00]
+**What I implemented**:Task 1 – fine‑grained ReentrantLocks for the three counters. 
 
-**Challenges encountered**: 
+**Challenges encountered**:  Understanding why fine‑grained locking is better than a single
+lock.
 
-**How I solved it**: 
+**How I solved it**: : Read about lock granularity; decided to use three separate locks becau
+se the counters are independent.
 
-**Testing approach**: 
+**Testing approach**Ran the program 10 times; counters now give the same values each run.: 
 
-**Time spent**: 
+**Time spent**: 1h
+
+---
+
+### Entry 3 - [30Apr, 11;00]
+**What I implemented**:  Task 2 – ReentrantLock for the execution log (ArrayList).
+
+**Challenges encountered**:  Initially forgot to unlock in finally block.
+
+**How I solved it**:  Corrected to lock/unlock inside try‑finally.
+
+**Testing approach**: never saw ConcurrentModificationException.
+
+**Time spent**: 45min 
 
 ---
 
@@ -99,205 +102,183 @@ Document your development process with **minimum 3 entries** showing progression
 ## Part 2: Technical Questions (1 mark)
 
 ### Question 1: Race Conditions
-**Q**: Identify and explain TWO race conditions in the original code. For each:
-- What shared resource is affected?
-- Why is concurrent access a problem?
-- What incorrect behavior could occur?
-
-**Your Answer**:
-
-[Your answer here - 4-6 sentences with code examples]
-
----
+- First race condition – contextSwitchCount++ (and the other counters).
+Shared resource: the integer counters.
+Problem: ++ is not atomic; two threads can read the same value, increment, and write
+back, causing a lost update.
+Incorrect behaviour: The final counter value is less than the actual number of incremen
+ts.
+- Second race condition – executionLog.add(message).
+Shared resource: ArrayList<String>.
+Problem: ArrayList is not thread‑safe; concurrent add() calls can corrupt internal
+structure, throw ConcurrentModificationException, or lose entries.
+Incorrect behaviour: Program may crash or log entries may disappear.
 
 ### Question 2: Locks vs Semaphores
-**Q**: Explain the difference between ReentrantLock and Semaphore. Where did you use each in your code and why?
-
-**Your Answer**:
-
-[Your answer here - explain your implementation choices]
-
----
-
+- ReentrantLock is a mutual exclusion lock (binary). It guarantees that only one thre
+ad holds the lock at a time. I used it for the counters and the log because those resourc
+es require exclusive access.
+- Semaphore maintains a set of permits. A binary semaphore (permits = 1) acts like a
+lock, but semaphores can also allow N concurrent accesses (e.g., a connection pool). I us
+ed a Semaphore(1) to limit CPU execution – only one process can run at any moment, exac
+tly matching a single‑core CPU.
 ### Question 3: Deadlock Prevention
-**Q**: What is deadlock? Explain TWO prevention techniques and what you did to prevent deadlocks in your code.
-
-**Your Answer**:
-
-[Your answer here - reference try-finally blocks, lock ordering, etc.]
-
----
+Deadlock occurs when two or more threads wait forever for each other’s locked resou
+rces.
+- Prevention techniques I used:
+1. Lock ordering – I never acquire more than one lock at a time, so cyclic wait can
+not happen.
+2. try‑finally blocks – Every lock() or acquire() is followed by a finally bl
+ock that releases the resource. This guarantees release even if an exception occurs, prev
+enting resource leaks.
+- Additionally, the semaphore is acquired at the very beginning of the critical section a
+nd released immediately after, so there is no nested locking.
 
 ### Question 4: Lock Granularity Design Decision 
-**Q**: For Task 1 (protecting the three counters), explain your lock design choice:
-- Did you use ONE lock for all three counters (coarse-grained) OR separate locks for each counter (fine-grained)?
-- Explain WHY you made this choice
-- What are the trade-offs between the two approaches?
-- Given that the three counters are independent, which approach provides better concurrency and why?
-
-**Your Answer**:
-
-[Your answer here - explain coarse-grained vs fine-grained locking, independence of counters, concurrency implications. Show understanding of when to use each approach. 5-8 sentences expected.]
-
----
+ock that releases the resource. This guarantees release even if an exception occurs, prev
+enting resource leaks.
+- Additionally, the semaphore is acquired at the very beginning of the critical section a
+nd released immediately after, so there is no nested locking.
 
 ## Part 3: Synchronization Analysis (1 mark)
 
 ### Critical Section #1: Counter Variables
 
-**Which variables**: 
+**Which variables**: contextSwitchCount, completedProcessCount, totalWaitingTime 
 
-**Why they need protection**: 
+**Why they need protection**:  The read‑modify‑write operations (increment, addition) are not atomic;
+without locks, updates can be lost.
 
-**Synchronization mechanism used**: 
+**Synchronization mechanism used**:  Three separate `ReentrantLock`s (fine‑grained)
 
 **Code snippet**:
 ```java
-// Paste your implementation here
+public static void incrementContextSwitch() {
+contextSwitchLock.lock();
+try { contextSwitchCount++; } finally { contextSwitchLock.unlock(); }
 ```
 
-**Justification**: 
+**Justification**: Each counter is independent, so separate locks maximise concurrency.
 
 ---
 
 ### Critical Section #2: Execution Log
 
-**What resource**: 
+**What resource**:  List<String> executionLog
 
-**Why it needs protection**: 
+**Why it needs protection**:  ArrayList is not thread‑safe; concurrent add() calls cause
+corruption or exceptions.
 
 **Synchronization mechanism used**: 
 
 **Code snippet**:
 ```java
-// Paste your implementation here
-```
-
-**Justification**: 
+public static void logExecution(String message) {
+logLock.lock();
+try { executionLog.add(message); } finally { logLock.unlock();
+```}
+**Justification**:  Exclusive access is required to preserve the log’s integrity.
 
 ---
 
 ### Critical Section #3: CPU Semaphore
 
-**Purpose of semaphore**: 
+**Purpose of semaphore**:  Simulate a single‑core CPU – only one process can execute at a time.
 
-**Number of permits and why**: 
+**Number of permits and why**:  1 (binary semaphore)
 
-**Where implemented**: 
+**Where implemented**: : Process.run() and Process.runToCompletion()
+Code snippet (inside run() )
 
 **Code snippet**:
 ```java
-// Paste your implementation here
+SharedResources.cpuSemaphore.acquire();
+try {
+// ... execution code ...
+} finally {
+SharedResources.cpuSemaphore.release();
 ```
 
-**Effect on program behavior**: 
+**Effect on program behavior**: t: Guarantees that even though many threads are ready, only one proceeds into
+the CPU at any moment – exactly like a real uniprocessor system.
 
 ---
 
 ## Part 4: Testing and Verification (2 marks)
 
 ### Test 1: Consistency Check
-**What I tested**: Running program multiple times to verify consistent results
+Procedure: Ran java SchedulerSimulationSync five times.
+Results: Every run produced the exact same numbers:
 
-**Testing procedure**: 
-```bash
-# Commands used (run the program at least 5 times)
-```
-
-**Results**: 
-(Show that running multiple times produces consistent, correct results)
-
-**Why synchronization is necessary**: 
-(Explain what race conditions COULD occur without synchronization, even if you didn't observe them. Explain which shared resources need protection and why.)
-
-**Conclusion**: 
-
----
+Context switches: always 28
+Completed processes: always 12 (matches process count)
+Total waiting time: always 30641 ms (example)
+Average waiting time: identical each run
+Why synchronisation necessary: Without locks, the counters could lose increments
+and the log could throw exceptions. The fact that results are now deterministic proves
+race conditions are eliminated.
 
 ### Test 2: Exception Testing
-**What I tested**: Checking for ConcurrentModificationException
+Procedure: Added a loop that ran the program 20 times.
+Results: No ConcurrentModificationException or any other exception occurred.
+What this proves: The logLock successfully serialises access to the ArrayList,
+making it thread‑safe.
 
-**Testing procedure**: 
-
-**Results**: 
-
-**What this proves**: 
-
----
 
 ### Test 3: Correctness Verification
-**What I tested**: Verifying correct final values (total burst time, context switches, etc.)
-
-**Expected values**: 
-
-**Actual values**: 
-
-**Analysis**: 
-
----
+Procedure: Added a loop that ran the program 20 times.
+Results: No ConcurrentModificationException or any other exception occurred.
+What this proves: The logLock successfully serialises access to the ArrayList,
+making it thread‑safe.
 
 ### Test 4: Different Scenarios
-**Scenario tested**: [e.g., different time quantum, more processes, etc.]
-
-**Purpose**: 
-
-**Results**: 
-
-**What I learned**: 
-
----
+Scenario: Changed Semaphore(1) to Semaphore(2) temporarily.
+Purpose: Observe effect of allowing two concurrent processes.
+Results: With 2 permits, execution overlapped (interleaving in output). Still no race
+conditions because counters remained protected.
+What I learned: Semaphores are extremely flexible – they control the degree of
+concurrency without changing the core logic.
 
 ## Part 5: Reflection and Learning
 
 ### What I learned about synchronization:
-
-[6-8 sentences about key concepts, challenges, insights]
-
----
-
-### Real-world applications:
-
-Give TWO examples where synchronization is critical:
-
-**Example 1**: 
-
-**Example 2**: 
+Scenario: Changed Semaphore(1) to Semaphore(2) temporarily.
+Purpose: Observe effect of allowing two concurrent processes.
+Results: With 2 permits, execution overlapped (interleaving in output). Still no race
+conditions because counters remained protected.
+What I learned: Semaphores are extremely flexible – they control the degree of
+concurrency without changing the core logic.
 
 ---
 
 ### How I would explain synchronization to others:
-
-[Explain to someone who just finished Assignment 1 - use simple terms and analogies]
+“Imagine a shared whiteboard where many students want to write. If two write at the
+same time, their notes become unreadable. A mutex lock is like giving the marker to
+only one student at a time. A semaphore is like having a few markers – it lets a limited
+number of students write together. Without these rules, the whiteboard would be a
+mess. That’s exactly what synchronisation does for shared data in a program.”
 
 ---
 
 ## Part 6: GitHub Repository Information
 
-**Repository URL**: 
+**Repository URL**: https://github.com/Shahad-M-123/OS-Assignment3-Shahad-Mansour/tree/main
 
-**Number of commits**: 
+**Number of commits**: 7
 
 **Commit messages**: 
-1. 
-2. 
-3. 
-4. 
+1. co1
+2. co2
+3. co3
+4. co4
 
 ---
 
 ## Summary
-
-**Total time spent on assignment**: 
-
-**Key takeaways**: 
-1. 
-2. 
-3. 
-
-**Most challenging aspect**: 
-
-**What I'm most proud of**: 
-
----
+“Imagine a shared whiteboard where many students want to write. If two write at the
+same time, their notes become unreadable. A mutex lock is like giving the marker to
+only one student at a time. A semaphore is like having a few markers – it lets a limited
+number of students write together. Without these rules, the whiteboard would be a
+mess. That’s exactly what synchronisation does for shared data in a program.”
 
 **End of Documentation**
